@@ -13,13 +13,13 @@ Publish BestBrain as a ChatGPT app via the [OpenAI Apps SDK](https://developers.
 ### 1. Run MCP server locally
 
 ```bash
-py -m app_handler.openai_asdk.mcp_server --port 8787
+py -m app_handler.openai_asdk.mcp_server --port 8000
 ```
 
 ### 2. Expose for ChatGPT (development)
 
 ```bash
-ngrok http 8787
+ngrok http 8000
 # Use https://<subdomain>.ngrok.app/mcp as Connector URL
 ```
 
@@ -36,7 +36,7 @@ ngrok http 8787
 docker build -t bestbrain-mcp-app -f app_handler/openai_asdk/Dockerfile.mcp .
 
 # Run
-docker run -p 8787:8787 bestbrain-mcp-app
+docker run -p 8000:8000 bestbrain-mcp-app
 ```
 
 ## AppPublisher Class

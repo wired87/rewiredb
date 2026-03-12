@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel
+
 
 @dataclass
 class UpsertDataIn:
@@ -72,6 +74,12 @@ class GraphResponse:
     edges: List[GraphEdgeOut] = field(default_factory=list)
     stats: Dict[str, Any] = field(default_factory=dict)
 
+class GetEntryRequest(BaseModel):
+    entry_id: str
+    table: str
+
+class GetGraphRequest(BaseModel):
+    user_id: str
 
 @dataclass
 class DeleteRequest:

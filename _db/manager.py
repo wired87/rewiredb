@@ -20,7 +20,7 @@ from _db.queries import duck_row_from_id
 try:
     from _duckdb import DuckDBPyConnection as ddb_res
 except ImportError:
-    ddb_res = DuckDBPyConnection  # type: ignore
+    ddb_res = DuckDBPyConnection
 
 try:
     import pandas as pd  # type: ignore

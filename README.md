@@ -44,13 +44,13 @@ pip install -r r.txt
 ### 2) Start the MCP server
 
 ```bash
-python -m mcp_server.mcp_routes --host 0.0.0.0 --port 8787 --path /mcp
+python -m mcp_server.mcp_routes --host 0.0.0.0 --port 8000 --path /mcp
 ```
 
 ### 3) Open an MCP client (optional check)
 
 ```bash
-npx @modelcontextprotocol/inspector@latest --server-url http://localhost:8787/mcp --transport http
+npx @modelcontextprotocol/inspector@latest --server-url http://localhost:8000/mcp --transport http
 ```
 
 ### 4) Use these core tools in order
@@ -63,5 +63,5 @@ npx @modelcontextprotocol/inspector@latest --server-url http://localhost:8787/mc
 ## Notes
 
 - Built for your own data flow (no seeded data required).
-- Default MCP endpoint is `/mcp` on port `8787`.
+- Default MCP endpoint is `/mcp` on port `8000`.
 - Health page is available at `/health`.

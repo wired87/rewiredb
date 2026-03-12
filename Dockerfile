@@ -33,12 +33,12 @@ COPY . .
 ENV PYTHONPATH=/usr/src/app:$PYTHONPATH
 ENV PYTHONUNBUFFERED=1 \
     MCP_HOST=0.0.0.0 \
-    MCP_PORT=8787 \
+    MCP_PORT=8000 \
     MCP_PATH=/mcp \
     MCP_JSON_RESPONSE=true \
     MCP_STATELESS_HTTP=true \
     LOCAL_PATH=/usr/src/app/local_data \
-    PORT=8787 \
+    PORT=8000 \
     GCS_MOUNT_PATH=/mnt/bucket/
 
 # Create local in-container path for mounted data/artifacts
@@ -51,7 +51,7 @@ COPY startup.sh .
 RUN chmod +x startup.sh
 
 # Expose the application port
-EXPOSE 8787
+EXPOSE 8000
 
 # Local volume path inside the container
 VOLUME ["/usr/src/app/local_data"]

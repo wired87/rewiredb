@@ -2,7 +2,7 @@
 # Ref: https://developers.openai.com/apps-sdk/deploy
 #
 # Build: docker build -t bestbrain-mcp-app -f app_handler/openai_asdk/Dockerfile.mcp .
-# Run:   docker run -p 8787:8787 -e PORT=8787 bestbrain-mcp-app
+# Run:   docker run -p 8000:8000 -e PORT=8000 bestbrain-mcp-app
 
 # --- Builder stage ---
 FROM python:3.10-slim AS builder
@@ -30,12 +30,12 @@ ENV PATH=/root/.local/bin:$PATH
 # Copy project (context is repo root)
 COPY . .
 
-# MCP server port (Apps SDK quickstart default: 8787)
+# MCP server port (Apps SDK quickstart default: 8000)
 ENV PYTHONPATH=/usr/src/app \
     PYTHONUNBUFFERED=1 \
-    PORT=8787
+    PORT=8000
 
-EXPOSE 8787
+EXPOSE 8000
 
 # Run MCP server (module path from repo root: _admin.app_handler.openai_asdk)
-CMD ["python", "-m", "_admin.app_handler.openai_asdk.mcp_server", "--port", "8787", "--host", "0.0.0.0"]
+CMD ["python", "-m", "_admin.app_handler.openai_asdk.mcp_server", "--port", "8000", "--host", "0.0.0.0"]

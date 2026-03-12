@@ -1,13 +1,7 @@
 import json
 import os
 from typing import Any, Dict, List, Optional, Tuple
-
-import jax.numpy as jnp
 import pandas as pd
-
-from qbrain.core.qbrain_manager import get_qbrain_table_manager
-from qbrain.jax_test.iterator.iterator import Iterator, build_time_ctlr
-
 
 class PathfinderManager:
     """
@@ -43,7 +37,8 @@ class PathfinderManager:
         return sorted_operators, sorted_params
 
     def create_nodes(self, operators, params):
-        from qbrain.embedder import embed
+        from embedder import embed
+        import jax.numpy as jnp
         operators = jnp.stack([embed(v) for v in operators])
         params = jnp.stack([embed(v) for v in params])
         return operators, params
@@ -217,6 +212,7 @@ class PathfinderManager:
         Uses scores per time/feature and groups consecutive high‑score positions
         into coarse segments.
         """
+        import jax.numpy as jnp
         scores, idx_within_t = self.iterator.scan_in_out_features(ctlr)
         if scores.size == 0:
             return []
@@ -266,14 +262,13 @@ class PathfinderManager:
 
     def _segment_from_range(
         self,
-        ctlr,
-        scores: jnp.ndarray,
+        scores,
         start: int,
         end: int,
-        T: int,
         N_all: int,
     ) -> Dict[str, Any]:
         """Helper to map flat index range back to (t, idx_within_t) region."""
+        import jax.numpy as jnp
         flat_indices = jnp.arange(start, end + 1, dtype=jnp.int32)
         t_indices = (flat_indices // N_all).tolist()
         v_indices = (flat_indices % N_all).tolist()
@@ -307,6 +302,7 @@ class PathfinderManager:
         selected segment. The result can be used as a compact description of
         the underlying trajectory.
         """
+        import jax.numpy as jnp
         seg = {
             "flat_index_start": event_segment.get("flat_index_start", 0),
             "flat_index_end": event_segment.get("flat_index_end", 0),

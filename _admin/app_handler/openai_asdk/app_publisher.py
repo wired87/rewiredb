@@ -86,14 +86,14 @@ class AppPublisher:
         app_metadata: AppMetadata,
         mcp_server_factory: Optional[Callable[[], Any]] = None,
         docker_image_name: str = "bestbrain-mcp-app",
-        port: int = 8787,
+        port: int = 8000,
     ):
         """
         Args:
             app_metadata: App name, version, description for directory listing.
             mcp_server_factory: Callable that returns an MCP server instance.
             docker_image_name: Name for the Docker image.
-            port: Port the MCP server listens on (default 8787 per quickstart).
+            port: Port the MCP server listens on (default 8000 per quickstart).
         """
         self.app_metadata = app_metadata
         self.mcp_server_factory = mcp_server_factory
@@ -168,7 +168,7 @@ class AppPublisher:
         Docker best practices for MCP app deployment.
         """
         return [
-            "Expose single port for MCP (e.g. 8787); map to 80/443 via ingress.",
+            "Expose single port for MCP (e.g. 8000); map to 80/443 via ingress.",
             "Use multi-stage build: builder for deps, slim runner for runtime.",
             "Set PYTHONUNBUFFERED=1 for real-time logs.",
             "Health check: GET / returns 200 (e.g. 'MCP server' plain text).",

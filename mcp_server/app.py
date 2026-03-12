@@ -9,3 +9,4 @@ def create_app() -> FastMCP:
     return create_mcp_server()
 
 app = create_app()
+

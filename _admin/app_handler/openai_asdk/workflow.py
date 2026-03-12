@@ -125,7 +125,7 @@ EXPECTED_TOOL_RESPONSE = {
 
 # --- MCP server config: port and path for local testing ---
 # ChatGPT connector URL format: https://<domain>/mcp
-MCP_SERVER_PORT = 8787
+MCP_SERVER_PORT = 8000
 MCP_SERVER_HOST = "127.0.0.1"
 MCP_PATH = "/mcp"
 HEALTH_PATH = "/"

@@ -13,7 +13,7 @@ This validates metadata, tools, MCP server, and writes **app_submission_manifest
 ## 2. Deploy the MCP server to a public HTTPS URL
 
 - **Option A:** Deploy the Docker image to Cloud Run / Fly.io / Render and note the base URL.
-- **Option B:** For testing, run `ngrok http 8787` and use `https://<your-subdomain>.ngrok.app`.
+- **Option B:** For testing, run `ngrok http 8000` and use `https://<your-subdomain>.ngrok.app`.
 
 The Connector URL you will paste in the form must be: **https://&lt;your-domain&gt;/mcp**
 

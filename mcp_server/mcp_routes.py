@@ -18,7 +18,7 @@ from mcp_server.service import MCPServerService
 
 APP_NAME = "eq-storage"
 DEFAULT_HOST = "0.0.0.0"
-DEFAULT_PORT = 8787
+DEFAULT_PORT = 8000
 DEFAULT_PATH = "/mcp"
 _WINDOWS_BOOTSTRAP_DONE = False
 
@@ -222,13 +222,14 @@ def _build_tool_callable(
         for param_name, param in signature.parameters.items()
     ]
     resolved_return = resolved_hints.get("return", signature.return_annotation)
+
     resolved_signature = signature.replace(
         parameters=resolved_params,
         return_annotation=resolved_return,
     )
 
     def tool_callable(**kwargs: Any) -> Any:
-        print(f"[DEBUG] Tool '{method_name}' called with kwargs={kwargs}")
+        print(f"[DEBUG] Tool '{method_name}' called")
         converted = {}
         for param_name, param in signature.parameters.items():
             if param_name not in kwargs:
@@ -238,7 +239,6 @@ def _build_tool_callable(
 
         bound = signature.bind(**converted)
         bound.apply_defaults()
-        print(f"[DEBUG] Tool '{method_name}' bound arguments: args={bound.args}, kwargs={bound.kwargs}")
         result = service_method(*bound.args, **bound.kwargs)
         print(f"[DEBUG] Tool '{method_name}' raw result type: {type(result).__name__}")
         if is_dataclass(result):

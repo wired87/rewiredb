@@ -5,8 +5,8 @@ Exposes /mcp endpoint per https://developers.openai.com/apps-sdk/quickstart.
 Implements JSON-RPC 2.0: initialize, tools/list, tools/call so ChatGPT can
 discover and invoke tools. Stateless mode (no session persistence).
 
-Run: python -m _admin.app_handler.openai_asdk.mcp_server --port 8787
-Test: npx @modelcontextprotocol/inspector@latest --server-url http://localhost:8787/mcp --transport http
+Run: python -m _admin.app_handler.openai_asdk.mcp_server --port 8000
+Test: npx @modelcontextprotocol/inspector@latest --server-url http://localhost:8000/mcp --transport http
 """
 
 from __future__ import annotations
@@ -214,7 +214,7 @@ async def mcp_nested_404(rest: str):
 
 def main():
     parser = argparse.ArgumentParser(description="BestBrain MCP server for OpenAI Apps SDK")
-    parser.add_argument("--port", type=int, default=8787, help="Port to listen on")
+    parser.add_argument("--port", type=int, default=8000, help="Port to listen on")
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind")
     args = parser.parse_args()
 

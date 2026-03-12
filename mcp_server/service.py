@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import networkx as nx
 
-from _db.manager import DBManager
 from graph.local_graph_utils import GUtils
 from mcp_server.types import (
     DeleteRequest,
@@ -24,17 +23,20 @@ from utils.id_gen import generate_id
 
 
 class MCPServerService:
-    def __init__(self) -> None:
-        self.db = DBManager()
+    def __init__(self, db) -> None:
+        """Initialize DB access, extractor cache, and in-memory working graph."""
+        self.db = db
         self._eq_extractor_cls = None
         self.g=GUtils(G=nx.MultiGraph())
 
     @staticmethod
     def _now() -> datetime:
+        """Return UTC timestamp used for persisted records."""
         return datetime.utcnow()
 
     @staticmethod
     def _as_text(payload_bytes: bytes) -> str:
+        """Decode bytes to text with UTF-8 fallback to latin-1."""
         try:
             return payload_bytes.decode("utf-8")
         except Exception:
@@ -68,6 +70,7 @@ class MCPServerService:
 
 
     def _load_eq_extractor_class(self):
+        """Lazily import and cache EqExtractor class from math/eq_extractor.py."""
         if self._eq_extractor_cls is not None:
             return self._eq_extractor_cls
         try:
@@ -83,8 +86,12 @@ class MCPServerService:
 
     def _extract_content_parts(self, text: str, file_name, user_id):
         """
-        Use EqExtractor.process_equation(text) as primary extraction engine.
-        Returns per-equation components: equation, params, operators, batches.
+        Run the equation extractor and append results into the internal graph.
+
+        Args:
+            text: Source text to analyze.
+            file_name: Context/module identifier attached to extracted nodes.
+            user_id: Owning user identifier used in graph metadata.
         """
         EqExtractorCls = self._load_eq_extractor_class()
         if EqExtractorCls is None:
@@ -104,6 +111,13 @@ class MCPServerService:
 
 
     def get_graph(self, user_id: str, test: bool = False) -> GraphResponse:
+        """
+        Build and return a graph view for a user from persisted data.
+
+        Args:
+            user_id: User identifier for graph filtering.
+            test: If true, keep graph artifacts in project output directory.
+        """
         print("[MCPServerService.get_graph] START")
         print(f"[MCPServerService.get_graph] LOGIC_GATE user_id={user_id} test={test}")
         if not user_id:
@@ -148,7 +162,9 @@ class MCPServerService:
 
     def upsert(self, request: UpsertRequest):
         """
-        Process text and files equation -> build G -> upsert DB
+        Ingest text/files, extract graph entities, and upsert rows into storage.
+        Args:
+            request: Upsert payload containing user_id, files, and optional equation.
         """
         user_id =request.user_id
         if not request.user_id:
@@ -202,7 +218,6 @@ class MCPServerService:
                 v["operator_neighbors"] = self.g.get_neighbor_list(node=k, target_type="OPERATOR", just_ids=True)
                 operator_rows.append({"id":k,**v})
 
-
         # EDGES
         edge_rows = []
         for src, trgt, attrs in self.g.G.edges(data=True):
@@ -215,16 +230,29 @@ class MCPServerService:
         self.db.insert("files", file_rows)
 
     def get_entry(self, entry_id: str, table: str = "methods", user_id: Optional[str] = None) -> EntryResponse:
+        """
+        Fetch a single entry by id from a table, optionally scoped by user.
+
+        Args:
+            entry_id: Primary identifier of the requested row.
+            table: Target table name.
+            user_id: Optional owner filter.
+        """
         try:
             row = self.db.row_from_id(entry_id, table=table, user_id=user_id)
         except ValueError as exc:
             return EntryResponse(status="error", table=table, message=str(exc))
         if not row:
-            return EntryResponse(status="not_found", table=table, message="Entry not found")
+            return EntryResponse(status="not_found1", table=table, message="Entry not found")
         return EntryResponse(status="ok", entry=row, table=table)
 
 
     def delete_entries(self, request: DeleteRequest) -> DeleteResponse:
+        """
+        Delete a single entry or all entries for a user in a table.
+        Args:
+            request: Delete payload with user_id, table, and optional entry_id.
+        """
         if not request.user_id:
             return DeleteResponse(status="error", message="user_id is required")
         if request.entry_id:

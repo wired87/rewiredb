@@ -16,7 +16,7 @@ _DEFAULT_DUCK_PATH = str(Path(__file__).resolve().parent.parent / "local.duckdb"
 
 def duck_db_path() -> str:
     """Single canonical path for all processes (prod, test, CLI)."""
-    return _DEFAULT_DUCK_PATH
+    return "local.duckdb"
 
 
 def duck_db_verbose() -> int:

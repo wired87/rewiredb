@@ -191,7 +191,7 @@ def main() -> None:
             else:
                 print("[Admin] Docker build OK")
         from _admin.app_handler.openai_asdk.workflow import run_workflow
-        success = run_workflow(start_server=True, port=8787)
+        success = run_workflow(start_server=True, port=8000)
         sys.exit(0 if success else 1)
 
     if args.deploy:

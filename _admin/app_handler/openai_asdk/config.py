@@ -35,7 +35,7 @@ class MCPConfig:
     """MCP server configuration."""
 
     host: str = "0.0.0.0"
-    port: int = 8787
+    port: int = 8000
     path: str = "/mcp"
     # Stateless mode for simple deployments
     stateless: bool = True
