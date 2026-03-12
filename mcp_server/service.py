@@ -191,14 +191,18 @@ class MCPServerService:
         operator_rows: List[Dict[str, Any]] = []
 
         for file_id, file_bytes in normalized:
+            print("work file", file_id, file=sys.stderr)
             file_text = (
                 self._extract_text_from_pdf_bytes(file_bytes)
                 if file_bytes.startswith(b"%PDF")
                 else self._as_text(file_bytes)
             )
+            print("file_text...", file=sys.stderr)
+
 
             # EXTRACT EQUATIONS
             self._extract_content_parts(file_text, file_id, user_id)
+            print("_extract_content_parts... done", file=sys.stderr)
 
             file_ids.append(file_id)
             file_rows.append(
@@ -209,10 +213,14 @@ class MCPServerService:
                     "created_at": self._now(),
                 }
             )
+            print("file id... done", file=sys.stderr)
+
 
         # EXTRACT EQUATIONS
         if request.data.equation:
             self._extract_content_parts(request.data.equation, f"{user_id}_{generate_id(20)}", user_id)
+            print("request.data.equation... done", file=sys.stderr)
+
         check = {}
         for k, v in self.g.G.nodes(data=True):
             ntype = v["type"]

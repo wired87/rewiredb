@@ -5,6 +5,7 @@ import argparse
 import inspect
 import json
 import os
+import sys
 from dataclasses import asdict, is_dataclass
 from typing import Any, Callable, Dict, Optional, get_type_hints
 
@@ -33,7 +34,7 @@ def _patch_streamable_http_accept_wildcard() -> None:
     try:
         from mcp.server.streamable_http import StreamableHTTPServerTransport
     except Exception as exc:
-        print(f"[DEBUG] Could not patch StreamableHTTP accept handling: {exc!r}")
+        print(f"[DEBUG] Could not patch StreamableHTTP accept handling: {exc!r}", file=sys.stderr)
         return
 
     if getattr(StreamableHTTPServerTransport, "_eq_accept_wildcard_patch_applied", False):
@@ -49,7 +50,7 @@ def _patch_streamable_http_accept_wildcard() -> None:
 
     StreamableHTTPServerTransport._check_accept_headers = _patched_check_accept_headers  # type: ignore[method-assign]
     StreamableHTTPServerTransport._eq_accept_wildcard_patch_applied = True
-    print("[DEBUG] Applied StreamableHTTP Accept wildcard compatibility patch")
+    print("[DEBUG] Applied StreamableHTTP Accept wildcard compatibility patch", file=sys.stderr)
 
 
 def _to_bool(value: Optional[str], default: bool) -> bool:
@@ -66,12 +67,17 @@ def create_mcp_server(
     json_response: bool = True,
     stateless_http: bool = True,
 ) -> FastMCP:
+    print("[DEBUG][workflow] create_mcp_server: start", file=sys.stderr)
     _patch_streamable_http_accept_wildcard()
     print(
         f"[DEBUG] create_mcp_server called host={host} port={port} "
         f"path={path} json_response={json_response} stateless_http={stateless_http}"
+        ,
+        file=sys.stderr,
     )
+    print("[DEBUG][workflow] create_mcp_server: creating service", file=sys.stderr)
     service = MCPServerService(db)
+    print("[DEBUG][workflow] create_mcp_server: creating FastMCP instance", file=sys.stderr)
     server = FastMCP(
         name=APP_NAME,
         instructions="MCP tools for eq_storage graph, entry retrieval, upsert, and deletion.",
@@ -82,19 +88,24 @@ def create_mcp_server(
         stateless_http=stateless_http,
     )
 
+    print("[DEBUG][workflow] create_mcp_server: registering public tools", file=sys.stderr)
     _register_public_service_methods(server=server, service=service)
+    print("[DEBUG][workflow] create_mcp_server: registering debug routes", file=sys.stderr)
     _register_debug_routes(server=server)
+    print("[DEBUG][workflow] create_mcp_server: running windows bootstrap checks", file=sys.stderr)
     _maybe_run_windows_bootstrap_checks(server=server, host=host, port=port, path=path)
-    print("server creation... done")
+    print("[DEBUG][workflow] create_mcp_server: done", file=sys.stderr)
     return server
 
 
 def _register_public_service_methods(server: FastMCP, service: MCPServerService) -> None:
+    print("[DEBUG][workflow] register_public_service_methods: start", file=sys.stderr)
     for method_name in sorted(name for name in dir(service) if not name.startswith("_")):
         method = getattr(service, method_name, None)
         if not callable(method):
             continue
 
+        print(f"[DEBUG][workflow] register_public_service_methods: preparing '{method_name}'", file=sys.stderr)
         signature = inspect.signature(method)
         annotations = _tool_annotations_for_method(method_name)
         description = (inspect.getdoc(method) or f"Auto-exposed method: MCPServerService.{method_name}").strip()
@@ -105,16 +116,20 @@ def _register_public_service_methods(server: FastMCP, service: MCPServerService)
             description=description,
             annotations=annotations,
         )(tool_func)
-        print(f"[DEBUG] Registered MCP tool: {method_name}")
+        print(f"[DEBUG] Registered MCP tool: {method_name}", file=sys.stderr)
+    print("[DEBUG][workflow] register_public_service_methods: done", file=sys.stderr)
 
 
 def _register_debug_routes(server: FastMCP) -> None:
+    print("[DEBUG][workflow] register_debug_routes: start", file=sys.stderr)
     @server.custom_route("/health", methods=["GET"], include_in_schema=False)
     async def _health(_: Request) -> Response:
+        print("[DEBUG][route] GET /health", file=sys.stderr)
         return JSONResponse({"status": "ok", "app": APP_NAME, "mcp_path": DEFAULT_PATH})
 
     @server.custom_route("/dashboard", methods=["GET"], include_in_schema=False)
     async def _dashboard(request: Request) -> Response:
+        print("[DEBUG][route] GET /dashboard", file=sys.stderr)
         base_url = f"{request.url.scheme}://{request.url.netloc}"
         mcp_url = f"{base_url}{DEFAULT_PATH}"
         health_url = f"{base_url}/health"
@@ -141,6 +156,7 @@ def _register_debug_routes(server: FastMCP) -> None:
 </body>
 </html>"""
         return HTMLResponse(content=html, status_code=200)
+    print("[DEBUG][workflow] register_debug_routes: done", file=sys.stderr)
 
 
 def _jsonable(value: Any) -> Any:
@@ -161,10 +177,11 @@ def _jsonable(value: Any) -> Any:
 def _maybe_run_windows_bootstrap_checks(*, server: FastMCP, host: str, port: int, path: str) -> None:
     global _WINDOWS_BOOTSTRAP_DONE
     if os.name != "nt" or _WINDOWS_BOOTSTRAP_DONE:
+        print("[DEBUG][WIN] Skipping bootstrap checks (non-Windows or already done)", file=sys.stderr)
         return
     _WINDOWS_BOOTSTRAP_DONE = True
 
-    print("[DEBUG][WIN] Running Windows MCP bootstrap diagnostics")
+    print("[DEBUG][WIN] Running Windows MCP bootstrap diagnostics", file=sys.stderr)
     try:
         tools = asyncio.run(server.list_tools())
         tool_payload = [_jsonable(tool) for tool in tools]
@@ -179,22 +196,22 @@ def _maybe_run_windows_bootstrap_checks(*, server: FastMCP, host: str, port: int
             },
             "tools": tool_payload,
         }
-        print("[DEBUG][WIN] MCP structure/hierarchy payload:")
-        print(json.dumps(hierarchy, indent=2, default=str))
+        print("[DEBUG][WIN] MCP structure/hierarchy payload:", file=sys.stderr)
+        print(json.dumps(hierarchy, indent=2, default=str), file=sys.stderr)
     except Exception as exc:
-        print(f"[DEBUG][WIN] Failed to print MCP hierarchy payload: {exc!r}")
+        print(f"[DEBUG][WIN] Failed to print MCP hierarchy payload: {exc!r}", file=sys.stderr)
 
     if _to_bool(os.getenv("MCP_RUN_BOOTSTRAP_TESTER"), False):
         try:
             from test import MCPWalkthroughTester
 
-            print("[DEBUG][WIN] Running MCPWalkthroughTester from root test.py")
+            print("[DEBUG][WIN] Running MCPWalkthroughTester from root test.py", file=sys.stderr)
             asyncio.run(MCPWalkthroughTester(server=server).run())
-            print("[DEBUG][WIN] MCPWalkthroughTester completed")
+            print("[DEBUG][WIN] MCPWalkthroughTester completed", file=sys.stderr)
         except Exception as exc:
-            print(f"[DEBUG][WIN] MCPWalkthroughTester failed: {exc!r}")
+            print(f"[DEBUG][WIN] MCPWalkthroughTester failed: {exc!r}", file=sys.stderr)
     else:
-        print("[DEBUG][WIN] Skipping MCPWalkthroughTester (set MCP_RUN_BOOTSTRAP_TESTER=1 to enable)")
+        print("[DEBUG][WIN] Skipping MCPWalkthroughTester (set MCP_RUN_BOOTSTRAP_TESTER=1 to enable)", file=sys.stderr)
 
 
 def _tool_annotations_for_method(method_name: str) -> ToolAnnotations:
@@ -229,22 +246,28 @@ def _build_tool_callable(
     )
 
     def tool_callable(**kwargs: Any) -> Any:
-        print(f"[DEBUG] Tool '{method_name}' called")
+        print(f"[DEBUG][workflow] Tool '{method_name}': called", file=sys.stderr)
         converted = {}
         for param_name, param in signature.parameters.items():
             if param_name not in kwargs:
                 continue
             annotation = resolved_hints.get(param_name, param.annotation)
+            print(
+                f"[DEBUG][workflow] Tool '{method_name}': coercing arg '{param_name}' "
+                f"to {getattr(annotation, '__name__', str(annotation))}",
+                file=sys.stderr,
+            )
             converted[param_name] = _coerce_argument(kwargs[param_name], annotation)
 
         bound = signature.bind(**converted)
         bound.apply_defaults()
+        print(f"[DEBUG][workflow] Tool '{method_name}': invoking service method", file=sys.stderr)
         result = service_method(*bound.args, **bound.kwargs)
-        print(f"[DEBUG] Tool '{method_name}' raw result type: {type(result).__name__}")
+        print(f"[DEBUG][workflow] Tool '{method_name}': raw result type={type(result).__name__}", file=sys.stderr)
         if is_dataclass(result):
-            print(f"[DEBUG] Tool '{method_name}' returning dataclass as dict")
+            print(f"[DEBUG][workflow] Tool '{method_name}': returning dataclass as dict", file=sys.stderr)
             return asdict(result)
-        print(f"[DEBUG] Tool '{method_name}' returning result")
+        print(f"[DEBUG][workflow] Tool '{method_name}': returning result", file=sys.stderr)
         return result
 
     tool_callable.__name__ = method_name
@@ -262,7 +285,7 @@ def _resolve_type_hints(service_method: Callable[..., Any], method_name: str) ->
     try:
         return get_type_hints(target, globalns=target_globals, localns=localns)
     except Exception as exc:
-        print(f"[DEBUG] Failed to resolve type hints for tool '{method_name}': {exc!r}")
+        print(f"[DEBUG] Failed to resolve type hints for tool '{method_name}': {exc!r}", file=sys.stderr)
         return {}
 
 def _coerce_argument(value: Any, annotation: Any) -> Any:
@@ -296,7 +319,7 @@ def _read_runtime_config() -> Dict[str, Any]:
 
 def main() -> None:
     env_cfg = _read_runtime_config()
-    print(f"[DEBUG] Runtime config from env: {env_cfg}")
+    print(f"[DEBUG] Runtime config from env: {env_cfg}", file=sys.stderr)
     parser = argparse.ArgumentParser(description="Hosted FastMCP server for eq_storage")
     parser.add_argument("--host", default=env_cfg["host"], help="Server host (env: MCP_HOST)")
     parser.add_argument("--port", type=int, default=env_cfg["port"], help="Server port (env: MCP_PORT)")
@@ -314,7 +337,7 @@ def main() -> None:
         help="Enable stateless Streamable HTTP mode (env: MCP_STATELESS_HTTP)",
     )
     args = parser.parse_args()
-    print(f"[DEBUG] Parsed CLI args: {args}")
+    print(f"[DEBUG] Parsed CLI args: {args}", file=sys.stderr)
 
     server = create_mcp_server(
         host=args.host,
@@ -323,7 +346,7 @@ def main() -> None:
         json_response=args.json_response,
         stateless_http=args.stateless_http,
     )
-    print("[DEBUG] Starting MCP server with streamable-http transport")
+    print("[DEBUG] Starting MCP server with streamable-http transport", file=sys.stderr)
     server.run(transport="streamable-http")
 
 

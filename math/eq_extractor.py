@@ -1,6 +1,7 @@
 import ast
 import hashlib
 import re
+import sys
 from typing import List, Any, Dict, Optional, Set, Tuple
 
 import networkx as nx
@@ -111,9 +112,9 @@ class EqExtractor(ast.NodeVisitor):
         High-recall equation extraction from plain text, markdown, and LaTeX-like inputs.
         Returns metadata-rich records for downstream parsing/projection.
         """
+        print("extract_equations...", file=sys.stderr)
         equations: List[Dict[str, Any]] = []
         seen = set()
-        self._dbg("extract_equations:start", text_len=len(text or ""))
         for name, pattern in self.PATTERNS.items():
             for eq in self._match(pattern, text):
                 if not eq:
@@ -130,7 +131,8 @@ class EqExtractor(ast.NodeVisitor):
                         "confidence": 0.95 if name.startswith("latex_") else 0.8,
                     }
                 )
-        self._dbg("extract_equations:done", extracted=len(equations))
+        print(equations)
+        print("extract_equations... done", file=sys.stderr)
         return equations
 
     def parse_equation_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -315,6 +317,8 @@ class EqExtractor(ast.NodeVisitor):
         Extract all equations from text, parse them with scientific fallbacks,
         and project results into a GUtils-backed multigraph.
         """
+        print("text_to_multigraph...", file=sys.stderr)
+
         g.print_status_G()
         self.g = g
 
@@ -361,7 +365,8 @@ class EqExtractor(ast.NodeVisitor):
             )
 
         g.print_status_G()
-        self._dbg("text_to_multigraph:done", added=len(added_equation_ids))
+        self._dbg("text_to_multigraph... done", added=len(added_equation_ids))
+        print("text_to_multigraph... done", file=sys.stderr)
 
         return {
             "count": len(added_equation_ids),
