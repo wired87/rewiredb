@@ -71,7 +71,7 @@ def create_mcp_server(
         f"[DEBUG] create_mcp_server called host={host} port={port} "
         f"path={path} json_response={json_response} stateless_http={stateless_http}"
     )
-    service = MCPServerService()
+    service = MCPServerService(db)
     server = FastMCP(
         name=APP_NAME,
         instructions="MCP tools for eq_storage graph, entry retrieval, upsert, and deletion.",

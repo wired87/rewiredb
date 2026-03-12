@@ -315,7 +315,9 @@ class EqExtractor(ast.NodeVisitor):
         Extract all equations from text, parse them with scientific fallbacks,
         and project results into a GUtils-backed multigraph.
         """
+        g.print_status_G()
         self.g = g
+
         extracted = self.extract_equations(text)
         parsed_records = [self.parse_equation_record(r) for r in extracted]
         self._dbg(
@@ -358,7 +360,9 @@ class EqExtractor(ast.NodeVisitor):
                 rhs=parsed.get("rhs"),
             )
 
+        g.print_status_G()
         self._dbg("text_to_multigraph:done", added=len(added_equation_ids))
+
         return {
             "count": len(added_equation_ids),
             "equation_ids": added_equation_ids,

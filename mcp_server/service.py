@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -43,7 +44,7 @@ class MCPServerService:
             return payload_bytes.decode("latin-1", errors="ignore")
 
     @staticmethod
-    def _extract_text_from_pdf_bytes(payload_bytes: bytes) -> str:
+    def _extract_text_from_pdf_bytes(payload_bytes: bytes or str) -> str:
         """
         Lightweight PDF text extraction focused on text drawing operators.
         Falls back to decoded bytes if no text tokens are found.
@@ -51,6 +52,7 @@ class MCPServerService:
         raw = MCPServerService._as_text(payload_bytes)
 
         # Capture text blocks inside BT ... ET and extract (...) Tj / [...] TJ payloads.
+        print("get chunks...", file=sys.stderr)
         chunks: List[str] = []
         for block in re.findall(r"BT(.*?)ET", raw, flags=re.DOTALL):
             chunks.extend(re.findall(r"\((.*?)\)\s*Tj", block, flags=re.DOTALL))
@@ -66,7 +68,10 @@ class MCPServerService:
             txt = " ".join(txt.split())
             if txt:
                 cleaned.append(txt)
-        return "\n".join(cleaned) if cleaned else raw
+        finalized = "\n".join(cleaned) if cleaned else raw
+        print(finalized, file=sys.stderr)
+        print("get chunks... done", file=sys.stderr)
+        return finalized
 
 
     def _load_eq_extractor_class(self):
@@ -106,8 +111,10 @@ class MCPServerService:
                 user_id=user_id,
                 g=self.g,
             )
+            print("extracted", len(self.g.G.nodes), "nodes", file=sys.stderr)
+
         except Exception as e:
-            print("Err", e)
+            print("Err", e, file=sys.stderr)
 
 
     def get_graph(self, user_id: str, test: bool = False) -> GraphResponse:
@@ -118,8 +125,8 @@ class MCPServerService:
             user_id: User identifier for graph filtering.
             test: If true, keep graph artifacts in project output directory.
         """
-        print("[MCPServerService.get_graph] START")
-        print(f"[MCPServerService.get_graph] LOGIC_GATE user_id={user_id} test={test}")
+        print("[MCPServerService.get_graph] START", file=sys.stderr)
+        print(f"[MCPServerService.get_graph] LOGIC_GATE user_id={user_id} test={test}", file=sys.stderr)
         if not user_id:
             return GraphResponse(status="error", user_id="", stats={"message": "user_id is required"})
 
@@ -144,7 +151,7 @@ class MCPServerService:
 
             stats = dict(result.get("stats") or {})
             stats["artifacts"] = result.get("artifacts") or {}
-            print("[MCPServerService.get_graph] END ok")
+            print("[MCPServerService.get_graph] END ok", file=sys.stderr)
             return GraphResponse(
                 status="ok",
                 user_id=user_id,
@@ -153,7 +160,7 @@ class MCPServerService:
                 stats=stats,
             )
         except Exception as exc:
-            print(f"[MCPServerService.get_graph] END error={exc}")
+            print(f"[MCPServerService.get_graph] END error={exc}", file=sys.stderr)
             return GraphResponse(
                 status="error",
                 user_id=user_id,
@@ -166,6 +173,7 @@ class MCPServerService:
         Args:
             request: Upsert payload containing user_id, files, and optional equation.
         """
+        print("upsert...", file=sys.stderr)
         user_id =request.user_id
         if not request.user_id:
             return UpsertResponse(status="error", message="user_id is required")
@@ -174,6 +182,7 @@ class MCPServerService:
             (f"file_{user_id}_{generate_id(20)}", file.encode("utf-8", errors="ignore"))
             for file in request.data.files
         ]
+        print("files normalized", file=sys.stderr)
 
         file_ids: List[str] = []
         file_rows: List[Dict[str, Any]] = []
@@ -187,6 +196,8 @@ class MCPServerService:
                 if file_bytes.startswith(b"%PDF")
                 else self._as_text(file_bytes)
             )
+
+            # EXTRACT EQUATIONS
             self._extract_content_parts(file_text, file_id, user_id)
 
             file_ids.append(file_id)
@@ -199,23 +210,34 @@ class MCPServerService:
                 }
             )
 
+        # EXTRACT EQUATIONS
         if request.data.equation:
             self._extract_content_parts(request.data.equation, f"{user_id}_{generate_id(20)}", user_id)
-
+        check = {}
         for k, v in self.g.G.nodes(data=True):
+            ntype = v["type"]
             if v["type"] == "METHOD":
                 v["param_neighbors"] = self.g.get_neighbor_list(node=k, target_type="PARAM", just_ids=True)
                 v["operator_neighbors"] = self.g.get_neighbor_list(node=k, target_type="OPERATOR", just_ids=True)
+                if ntype not in check:
+                    check[ntype] = []
+                check[ntype].append(k)
                 method_rows.append({"id":k,**v})
 
             elif v["type"] == "PARAM":
                 v["method_neighbors"] = self.g.get_neighbor_list(node=k, target_type="METHOD", just_ids=True)
                 v["operator_neighbors"] = self.g.get_neighbor_list(node=k, target_type="OPERATOR", just_ids=True)
+                if ntype not in check:
+                    check[ntype] = []
+                check[ntype].append(k)
                 param_rows.append({"id":k,**v})
 
             elif v["type"] == "OPERATOR":
                 v["method_neighbors"] = self.g.get_neighbor_list(node=k, target_type="METHOD", just_ids=True)
                 v["operator_neighbors"] = self.g.get_neighbor_list(node=k, target_type="OPERATOR", just_ids=True)
+                if ntype not in check:
+                    check[ntype] = []
+                check[ntype].append(k)
                 operator_rows.append({"id":k,**v})
 
         # EDGES
@@ -228,6 +250,8 @@ class MCPServerService:
         self.db.insert("params", param_rows)
         self.db.insert("operators", operator_rows)
         self.db.insert("files", file_rows)
+        print(check, file=sys.stderr)
+        print("upsert... done", file=sys.stderr)
 
     def get_entry(self, entry_id: str, table: str = "methods", user_id: Optional[str] = None) -> EntryResponse:
         """
@@ -256,7 +280,7 @@ class MCPServerService:
         if not request.user_id:
             return DeleteResponse(status="error", message="user_id is required")
         if request.entry_id:
-            deleted = self.db.del_entry(nid=request.entry_id, table=request.table, user_id=request.user_id, )
+            deleted:int = self.db.del_entry(nid=request.entry_id, table=request.table, user_id=request.user_id, )
             return DeleteResponse(status="ok", deleted_count=deleted, mode="single")
         self.db.delete(table=request.table, where_clause=f"WHERE user_id = ?", params={"user_id": request.user_id})
         return DeleteResponse(status="ok", deleted_count=-1, mode="all")

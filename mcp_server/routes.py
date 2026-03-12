@@ -3,6 +3,7 @@ from mcp.server import FastMCP
 from _db.manager import DBManager
 from mcp_server.service import MCPServerService
 from mcp_server.types import DeleteRequest, UpsertRequest, GetGraphRequest, GetEntryRequest
+from mcp.server.fastmcp import Context
 
 app = FastMCP("rewiredb")
 db = DBManager()
@@ -14,10 +15,11 @@ async def upsert(request: UpsertRequest) -> dict:
     """
     try:
         service = MCPServerService(db)
-        return service.upsert(request)
+        result = service.upsert(request)
+        print("upsert result:", result)
+        return result
     except Exception as exc:
         return {"status": "error"}
-
 
 
 @app.tool()

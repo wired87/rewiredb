@@ -274,7 +274,7 @@ class DBManager:
             db_log("error", "insert failed", table=table)
         return ok
 
-    def del_entry(self, nid: str, table: str, user_id: str, name_id: str = "id") -> bool:
+    def del_entry(self, nid: str, table: str, user_id: str, name_id: str = "id") -> int:
         """
         Hard delete entry from DuckDB table.
         """
@@ -284,9 +284,9 @@ class DBManager:
             WHERE {name_id} = ? AND user_id = ?
             """
             self._con.execute(sql, [nid, user_id])
-            return True
+            return 1
         except Exception as e:
-            return False
+            return 0
 
     def create_table(
         self,
