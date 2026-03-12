@@ -1,88 +1,67 @@
-# eq_storage MCP Server
+# eq_storage
 
-Minimal MCP server for:
-- upsert from files (`methods`, `params`, `files`)
-- fetch by `entry_id`
-- graph from all user methods
-- delete single method or all user entries
+Turn equations and text into a living knowledge graph you can query through MCP.
 
-## Hosted MCP (Streamable HTTP)
+## What this project does
 
-The project exposes a hosted MCP server using the official `mcp` library and Streamable HTTP transport.
+- Ingests equations and file content through MCP.
+- Extracts methods, parameters, operators, and links between them.
+- Stores results in local DuckDB for quick retrieval.
+- Returns graph views to help you explore relationships, not just raw text.
 
-### Install deps in root venv
+## Why teams use it
+
+- Faster technical onboarding: new people can "see the model" in graph form.
+- Better reuse: avoid rewriting equations that already exist in prior work.
+- Stronger consistency: compare formulas across files, modules, and owners.
+- Traceable decisions: connect stored artifacts to extracted graph entities.
+
+## Pathfinder possibilities (experimental)
+
+The `pathfinder_manager` module extends the project from storage to discovery:
+
+- Detect recurring patterns in time-series controller outputs.
+- Persist reusable controller signatures for later comparison.
+- Support equation-inference workflows from recurring event segments.
+
+Use it as a "next layer" for insight generation after graph storage is in place.
+
+## Product view at a glance
+
+- **Capture**: your equations and files enter through MCP tools.
+- **Structure**: entities and connections are normalized in the graph model.
+- **Explore**: graph responses support analysis, QA, and downstream automation.
+- **Evolve**: Pathfinder can add pattern intelligence on top of stored history.
+
+## 2-minute run tutorial
+
+### 1) Install dependencies
 
 ```bash
 pip install -r r.txt
 ```
 
-### Start hosted MCP
+### 2) Start the MCP server
 
 ```bash
 python -m mcp_server.mcp_routes --host 0.0.0.0 --port 8787 --path /mcp
 ```
 
-Environment variable overrides:
-
-- `MCP_HOST` (default `0.0.0.0`)
-- `MCP_PORT` (default `8787`)
-- `MCP_PATH` (default `/mcp`)
-- `MCP_STATELESS_HTTP` (default `true`)
-
-### Validate with MCP Inspector
+### 3) Open an MCP client (optional check)
 
 ```bash
 npx @modelcontextprotocol/inspector@latest --server-url http://localhost:8787/mcp --transport http
 ```
 
-## MCP Tools
+### 4) Use these core tools in order
 
-- `upsert(user_id, files?, equation?, module_id?)`
-- `entry_get(entry_id, table?, user_id?)`
-- `graph_get(user_id, test?)`
-- `entries_delete(user_id, table?, entry_id?)`
+1. `upsert` (store your equation/file content)
+2. `get_graph` (view relationships)
+3. `get_entry` (inspect one item)
+4. `delete_entries` (cleanup when needed)
 
-Backward-compatible aliases:
+## Notes
 
-- `graph(...)` -> `graph_get(...)`
-- `delete(...)` -> `entries_delete(...)`
-
-## Minimal flow
-
-```mermaid
-flowchart LR
-    client[Client]
-    mcp[MCP Tool Calls]
-    service[ServerService]
-    extract[File/Equation Extraction]
-    db[(DuckDB methods params files)]
-    graph[Graph Build with GUtils]
-    response[JSON Response]
-
-    client --> mcp
-    mcp --> service
-    service --> extract
-    extract --> db
-    service --> graph
-    db --> graph
-    service --> response
-```
-
-## Example payloads
-
-`upsert`
-
-```json
-{
-  "user_id": "u1",
-  "module_id": "m1",
-  "files": ["eT14KzIKej14Kng="],
-  "equation": "f = m * a"
-}
-```
-
-`graph_get`
-
-```json
-{"user_id": "u1"}
-```
+- Built for your own data flow (no seeded data required).
+- Default MCP endpoint is `/mcp` on port `8787`.
+- Health page is available at `/health`.

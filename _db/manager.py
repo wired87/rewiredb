@@ -67,6 +67,7 @@ class DBManager:
                     return con
                 except Exception:
                     pass
+                # voita
                 # If read_only is also blocked, fall back to a per-process DB file.
                 base = Path(path)
                 alt = str(base.with_name(f"{base.stem}.{os.getpid()}{base.suffix}"))
